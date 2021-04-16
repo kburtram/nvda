@@ -432,30 +432,9 @@ def makePotSourceFileList(target, sourceFiles, env):
 		fileList.writelines([f + '\n' for f in potSourceFiles])
 
 
-env.SConscript("devDocs/sconscript", exports=["env", "outputDir", "sourceDir", "t2tBuildConf"])
-
-def getSubDirs(path):
-	for root, dirNames, fileNames in os.walk(path):
-		yield root
-
-def makePot(target, source, env):	
-	# The Glob() SCons function doesnt have the ability to go recursive. Instead
-	# walk the dirs and match patterns.
-	potSourceFiles = [
-		# Don't use sourceDir as the source, as this depends on comInterfaces and nvdaHelper.
-		# We only depend on the Python files.
-		f for recurseDirs in getSubDirs(str(source[0]))
-		for pattern in ("*.py", "*.pyw")
-		for f in env.Glob(
-			os.path.join(recurseDirs, pattern),
-			# Exclude comInterfaces, since these don't contain translatable strings
-			# and they cause unknown encoding warnings.
-			exclude="source/comInterfaces/*"
-		)
-	]
-
+def makePot(target, source, env):
 	potSourceFileList = outputDir.File("potSourceFileList.txt")
-	makePotSourceFileList(potSourceFileList, potSourceFiles, env)
+	makePotSourceFileList(potSourceFileList, source, env)
 	# Generate the pot.
 	if env.Execute([
 		[
@@ -492,9 +471,32 @@ def makePot(target, source, env):
 	os.rename(tmpFn, potFn)
 
 
+env.SConscript("devDocs/sconscript", exports=["env", "outputDir", "sourceDir", "t2tBuildConf"])
+
+
+def getSubDirs(path):
+	for root, dirNames, fileNames in os.walk(path):
+		yield root
+
+
+# The Glob() SCons function doesnt have the ability to go recursive. Instead
+# walk the dirs and match patterns.
+potSourceFiles = [
+	# Don't use sourceDir as the source, as this depends on comInterfaces and nvdaHelper.
+	# We only depend on the Python files.
+	f for recurseDirs in getSubDirs(sourceDir.path)
+	for pattern in ("*.py", "*.pyw")
+	for f in env.Glob(
+		os.path.join(recurseDirs, pattern),
+		# Exclude comInterfaces, since these don't contain translatable strings
+		# and they cause unknown encoding warnings.
+		exclude="source/comInterfaces/*"
+	)
+]
+
 pot = env.Command(
 	outputDir.File("%s.pot" % outFilePrefix),
-	sourceDir.path,
+	potSourceFiles,
 	makePot
 )
 
