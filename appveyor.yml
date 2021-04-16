@@ -97,18 +97,6 @@ build_script:
  - 'echo scons args: %sconsArgs%'
  - scons source %sconsArgs%
  - if ERRORLEVEL 1 exit %ERRORLEVEL%
- # We don't need launcher to run checkPot, so run the checkPot before launcher.
- - ps: |
-     cmd.exe /c "scons checkPot $sconsArgs"
-     if($LastExitCode -ne 0) {
-      $errorCode=$LastExitCode
-      Add-AppveyorMessage "Translation comments missing or unexpectedly included."
-     }
-     if ($errorCode -ne 0) { $host.SetShouldExit($errorCode) }
- # The pot gets built by tests, but we don't actually need it as a build artifact.
- - 'echo scons output targets: %sconsOutTargets%'
- - scons %sconsOutTargets% %sconsArgs%
- - if ERRORLEVEL 1 exit %ERRORLEVEL%
  # Build symbol store.
  - ps: |
      foreach ($syms in
@@ -175,6 +163,18 @@ test_script:
      $wc = New-Object 'System.Net.WebClient'
      $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", $unitTestsXml)
      if($errorCode -ne 0) { $host.SetShouldExit($errorCode) }
+
+ - ps: |
+     cmd.exe /c "scons checkPot $sconsArgs"
+     if($LastExitCode -ne 0) {
+      $errorCode=$LastExitCode
+      Add-AppveyorMessage "Translation comments missing or unexpectedly included."
+     }
+     if ($errorCode -ne 0) { $host.SetShouldExit($errorCode) }
+ # The pot gets built by tests, but we don't actually need it as a build artifact.
+ - 'echo scons output targets: %sconsOutTargets%'
+ - scons %sconsOutTargets% %sconsArgs%
+ - if ERRORLEVEL 1 exit %ERRORLEVEL%
 
 # Flake8 Linting
  - ps: |
